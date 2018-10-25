@@ -4,4 +4,4 @@ nomenclature:
 baseUrls:
   http: faculty_profile/
   ws: faculty_profile/
-  isApi: true 
+  isApi: true
