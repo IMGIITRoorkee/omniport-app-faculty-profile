@@ -1,0 +1,7 @@
+nomenclature:
+  name: faculty_profile
+  verboseName: FacultyProfile
+baseUrls:
+  http: faculty_profile/
+  ws: faculty_profile/
+  isApi: true 
