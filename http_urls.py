@@ -1,7 +1,7 @@
 from django.conf.urls import url, include
 from rest_framework import routers
 import inflection
-from faculty_profile.views import viewset_dict
+from faculty_profile.views import viewset_dict, DragAndDropView
 
 models = [
     'Profile',
@@ -31,5 +31,6 @@ for model in models:
     )
 
 urlpatterns = [
+    url(r'rearrange', DragAndDropView.as_view()),
     url(r'^', include(router.urls)),
 ]
