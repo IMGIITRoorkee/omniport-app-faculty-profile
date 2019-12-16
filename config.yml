@@ -4,4 +4,10 @@ nomenclature:
 baseUrls:
   http: faculty_profile/
   ws: faculty_profile/
+acceptables:
+  roles:
+    - name: FacultyMember
+      activeStatuses:
+        - IS_ACTIVE
+        - HAS_BEEN_ACTIVE
 isApi: true
