@@ -1,4 +1,5 @@
 import swapper
+import requests
 
 from django.db import transaction
 from django.db.models import FieldDoesNotExist
@@ -11,11 +12,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
+from rest_framework.decorators import api_view, permission_classes
 
 from kernel.managers.get_role import get_role
+from omniport.settings.configuration.base import CONFIGURATION
 
 from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
+
+CMS = CONFIGURATION.integrations['cms']
 
 viewset_dict = {
     'Profile':None,
@@ -213,3 +218,37 @@ class DragAndDropView(APIView):
                 obj.priority = order[obj.id]
                 obj.save()
         return Response(serializer(objects.order_by('priority'), many=True).data)
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsFacultyMember,])
+def preview(request):
+    """
+    View to make a preview request to CMS
+    """
+
+    data = {}
+    data['username'] = request.person.user.username
+    data['token'] = CMS['facapp_token']
+    print(request.data)
+    url = 'http://' + CMS['url'] + CMS['faculty_url'] + request.data['action']
+
+
+    # return Response({
+    #         "message": "Content will update soon.",
+    #         "code": 205,
+    #         "url": "/departments/CSE/pages/Aman_Sharma.html"
+    # })
+
+    try:
+        response = requests.post(url, data, timeout=5)
+    except:
+        # Timeout error, connection refusal error
+        return Response('Unknown error', status=status.HTTP_400_BAD_REQUEST)
+
+
+    if response.status_code == 205:
+        return Response(response.json())
+    elif response.status_code == 403:
+        return Response('Authorization Error', status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response('Unknown Error', status=status.HTTP_400_BAD_REQUEST)

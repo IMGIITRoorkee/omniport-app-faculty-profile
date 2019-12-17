@@ -11,3 +11,5 @@ acceptables:
         - IS_ACTIVE
         - HAS_BEEN_ACTIVE
 isApi: true
+token: 3eBRi65GXIZyINvWq7GQK5ft5gXUjd1y
+cms_url: cms.channeli.in/nova/index.php?r=faculty-api/
