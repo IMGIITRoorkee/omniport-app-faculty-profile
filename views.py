@@ -239,12 +239,11 @@ def preview(request):
     except:
         # Timeout error, connection refusal error
         logger.info('CMS is not responding to requests')
-        return Response('Unknown error', status=status.HTTP_400_BAD_REQUEST)
-
+        return Response('Connection Refused', status=status.HTTP_502_BAD_GATEWAY)
 
     if response.status_code == 205:
         return Response(response.json())
     elif response.status_code == 403:
-        return Response('Authorization Error', status=status.HTTP_400_BAD_REQUEST)
+        return Response('Authorization Error', status=status.HTTP_403_FORBIDDEN)
     else:
         return Response('Unknown Error', status=status.HTTP_400_BAD_REQUEST)
