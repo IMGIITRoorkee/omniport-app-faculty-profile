@@ -1,5 +1,6 @@
 import swapper
 import requests
+import logging
 
 from django.db import transaction
 from django.db.models import FieldDoesNotExist
@@ -21,6 +22,7 @@ from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
 
 CMS = CONFIGURATION.integrations['cms']
+logger = logging.getLogger('faculty_profile')
 
 viewset_dict = {
     'Profile':None,
@@ -114,7 +116,8 @@ class ProfileViewset(ModelViewSet):
             else:
                 person.display_picture.save(img_file.name, img_file, save=True)
         except MultiValueDictKeyError: 
-            pass
+            logger.info('MultiValueDictKeyError has occurred when the user tried\
+                    to upload the profile image')
         try:
             data['displayPicture'] = request.person.display_picture.url       
         except ValueError:
@@ -156,7 +159,8 @@ class ProfileViewset(ModelViewSet):
             else:
                 person.display_picture.save(img_file.name, img_file, save=True)
         except MultiValueDictKeyError:
-            pass
+            logger.info('MultiValueDictKeyError has occurred when the user tried\
+                    to upload the profile image')
         try:
             data['displayPicture'] = request.person.display_picture.url       
         except ValueError:
@@ -229,20 +233,12 @@ def preview(request):
     data = {}
     data['username'] = request.person.user.username
     data['token'] = CMS['facapp_token']
-    print(request.data)
     url = 'http://' + CMS['url'] + CMS['faculty_url'] + request.data['action']
-
-
-    # return Response({
-    #         "message": "Content will update soon.",
-    #         "code": 205,
-    #         "url": "/departments/CSE/pages/Aman_Sharma.html"
-    # })
-
     try:
         response = requests.post(url, data, timeout=5)
     except:
         # Timeout error, connection refusal error
+        logger.info('CMS is not responding to requests')
         return Response('Unknown error', status=status.HTTP_400_BAD_REQUEST)
 
 
