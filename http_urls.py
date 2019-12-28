@@ -1,7 +1,11 @@
 from django.conf.urls import url, include
 from rest_framework import routers
 import inflection
-from faculty_profile.views import viewset_dict, DragAndDropView, preview
+from faculty_profile.views import (
+    CMSIntegrationView,
+    DragAndDropView,
+    viewset_dict,
+)
 
 models = [
     'Profile',
@@ -32,6 +36,6 @@ for model in models:
 
 urlpatterns = [
     url(r'rearrange', DragAndDropView.as_view()),
-    url(r'preview', preview),
+    url(r'cms', CMSIntegrationView.as_view()),
     url(r'^', include(router.urls)),
 ]

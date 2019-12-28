@@ -21,7 +21,6 @@ from omniport.settings.configuration.base import CONFIGURATION
 from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
 
-CMS = CONFIGURATION.integrations['cms']
 logger = logging.getLogger('faculty_profile')
 
 viewset_dict = {
@@ -223,27 +222,83 @@ class DragAndDropView(APIView):
                 obj.save()
         return Response(serializer(objects.order_by('priority'), many=True).data)
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsFacultyMember,])
-def preview(request):
+
+class CMSIntegrationView(APIView):
     """
-    View to make a preview request to CMS
+    This view interacts with CMS Integration. If you don't have a CMS
+    integrated, you don't need this view
     """
 
-    data = {}
-    data['username'] = request.person.user.username
-    data['token'] = CMS['facapp_token']
-    url = 'http://' + CMS['url'] + CMS['faculty_url'] + request.data['action']
-    try:
-        response = requests.post(url, data, timeout=5)
-    except:
-        # Timeout error, connection refusal error
-        logger.info('CMS is not responding to requests')
-        return Response('Connection Refused', status=status.HTTP_502_BAD_GATEWAY)
+    CMS = CONFIGURATION.integrations.get('cms', False)
 
-    if response.status_code == 205:
-        return Response(response.json())
-    elif response.status_code == 403:
-        return Response('Authorization Error', status=status.HTTP_403_FORBIDDEN)
-    else:
-        return Response('Unknown Error', status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request):
+        """
+        Returns whether CMS configuration exists or not
+        :return: whether CMS configuration exists or not
+        """
+
+        if self.CMS:
+            attributes = [
+                self.CMS.get('host'),
+                self.CMS.get('facapp_token'),
+                self.CMS.get('faculty_url'),
+            ]
+            if all(attributes):
+                return Response(
+                    'CMS configuration detected',
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                return Response(
+                    (
+                        'CMS falsely configured. Please provide `host`,'
+                        '`facapp_token` and `faculty_url` in the configuration'
+                    ),
+                    status=status.HTTP_406_NOT_ACCEPTABLE,
+                )
+        else:
+            return Response(
+                'You probably do not need faculty\'s information published',
+                status=status.HTTP_404_NOT_FOUND,
+        )
+
+    def post(self, request):
+        """
+        Forwards request to CMS for further processing.
+        """
+
+        data = {}
+        data['username'] = request.person.user.username
+        data['token'] = self.CMS.get('facapp_token')
+
+        host = self.CMS.get('host')
+        faculty_url = self.CMS.get('faculty_url')
+        action = request.data.get('action')
+        url = f'{host}{faculty_url}{action}'
+        
+        try:
+            response = requests.post(url, data, timeout=5)
+        except:
+            logger.info('CMS is not responding to requests')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if response.status_code == 205:
+            return Response(response.json())
+        elif response.status_code == 403:
+            return Response(
+                'Authorization Error',
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        elif response.status_code == 404:
+            return Response(
+                'Faculty not found',
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        else:
+            return Response(
+                'Unidentified Error',
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
