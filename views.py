@@ -271,6 +271,8 @@ class CMSIntegrationView(APIView):
         data['username'] = request.person.user.username
         data['token'] = self.CMS.get('facapp_token')
 
+        user = request.user.username
+
         host = self.CMS.get('host')
         faculty_url = self.CMS.get('faculty_url')
         action = request.data.get('action')
@@ -286,18 +288,22 @@ class CMSIntegrationView(APIView):
             )
 
         if response.status_code == 205:
+            logger.info(f'{user} successfully made a publish request')
             return Response(response.json())
         elif response.status_code == 403:
+            logger.warning(f'{user} made a forbidden publish request')
             return Response(
                 'Authorization Error',
                 status=status.HTTP_403_FORBIDDEN,
             )
         elif response.status_code == 404:
+            logger.warning(f'{user} does not have a faculty instance')
             return Response(
                 'Faculty not found',
                 status=status.HTTP_404_NOT_FOUND,
             )
         else:
+            logger.warning('CMS responded with an unidentified error')
             return Response(
                 'Unidentified Error',
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
