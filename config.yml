@@ -1,6 +1,7 @@
 nomenclature:
   name: faculty_profile
   verboseName: FacultyProfile
+description: Create your official profile page
 baseUrls:
   http: faculty_profile/
   ws: faculty_profile/
