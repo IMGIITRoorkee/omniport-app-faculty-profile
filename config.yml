@@ -1,6 +1,6 @@
 nomenclature:
   name: faculty_profile
-  verboseName: FacultyProfile
+  verboseName: FacApp
 description: Create your official profile page
 baseUrls:
   http: faculty_profile/
