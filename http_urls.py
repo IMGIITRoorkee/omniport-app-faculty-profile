@@ -31,7 +31,7 @@ for model in models:
     router.register(
         inflection.underscore(model),
         viewset_dict[model],
-        base_name=model
+        basename=model
     )
 
 urlpatterns = [
