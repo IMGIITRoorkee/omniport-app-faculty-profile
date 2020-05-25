@@ -279,7 +279,8 @@ class CMSIntegrationView(APIView):
         url = f'{host}{faculty_url}{action}'
         
         try:
-            response = requests.post(url, data, timeout=5)
+            # Remove `verify=False` when CMS adds chain certificate
+            response = requests.post(url, data, timeout=5, verify=False)
         except:
             logger.info('CMS is not responding to requests')
             return Response(
