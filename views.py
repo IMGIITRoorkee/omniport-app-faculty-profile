@@ -20,6 +20,7 @@ from omniport.settings.configuration.base import CONFIGURATION
 
 from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
+from faculty_profile.utils.notify import notify
 
 logger = logging.getLogger('faculty_profile')
 
@@ -289,10 +290,14 @@ class CMSIntegrationView(APIView):
             )
 
         if response.status_code == 205:
-            logger.info(f'{user} successfully made a publish request')
+            if action == 'publish':
+                notification_text = 'Your page has been published!'
+                notify(self.request.user.person, notification_text)
+
+            logger.info(f'{user} successfully made a {action} request')
             return Response(response.json())
         elif response.status_code == 403:
-            logger.warning(f'{user} made a forbidden publish request')
+            logger.warning(f'{user} made a forbidden {action} request')
             return Response(
                 'Authorization Error',
                 status=status.HTTP_403_FORBIDDEN,
