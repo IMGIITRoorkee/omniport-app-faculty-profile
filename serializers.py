@@ -33,15 +33,13 @@ def return_serializer(class_name):
         """
         Serializer for given class name
         """
+
         faculty_member = serializers.ReadOnlyField(
             source='faculty_member.person.full_name'
         )
 
         if hasattr(Model, 'has_already_ended'):
             is_completed = serializers.SerializerMethodField()
-
-            def get_is_completed(self, instance):
-                return instance.has_already_ended
 
         class Meta:
             """
@@ -50,11 +48,16 @@ def return_serializer(class_name):
 
             model = Model
             fields = '__all__'
-            if hasattr(Model, 'has_already_ended'):
-                extra_fields = ['is_completed']
+
+        def get_is_completed(self, instance):
+            """
+            Returns if the duration of an instance has ended
+            :return: if the duration of an instance has ended
+            """
+
+            return instance.has_already_ended
 
     return Serializer
-
 
 for key in serializer_dict:
     serializer_dict[key] = return_serializer(key)
