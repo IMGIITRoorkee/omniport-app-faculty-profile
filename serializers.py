@@ -20,30 +20,41 @@ serializer_dict = {
     'Paper': None,
 }
 
+
 def return_serializer(class_name):
     """
     Return the serializer for the given class
     :param class_name: the class whose serializer is being generated
     """
 
+    Model = swapper.load_model('faculty_biodata', class_name)
+
     class Serializer(serializers.ModelSerializer):
         """
         Serializer for given class name
         """
-
         faculty_member = serializers.ReadOnlyField(
             source='faculty_member.person.full_name'
         )
+
+        if hasattr(Model, 'has_already_ended'):
+            is_completed = serializers.SerializerMethodField()
+
+            def get_is_completed(self, instance):
+                return instance.has_already_ended
 
         class Meta:
             """
             Meta class for Serializer
             """
 
-            model = swapper.load_model('faculty_biodata', class_name)
+            model = Model
             fields = '__all__'
+            if hasattr(Model, 'has_already_ended'):
+                extra_fields = ['is_completed']
 
     return Serializer
+
 
 for key in serializer_dict:
     serializer_dict[key] = return_serializer(key)
