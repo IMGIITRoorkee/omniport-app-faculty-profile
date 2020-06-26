@@ -39,6 +39,7 @@ viewset_dict = {
     'Membership':None,
     'Book':None,
     'Paper':None,
+    'Miscellaneous': None,
 }
 
 def return_viewset(class_name):

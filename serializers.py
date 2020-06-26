@@ -18,6 +18,7 @@ serializer_dict = {
     'Membership': None,
     'Book': None,
     'Paper': None,
+    'Miscellaneous': None,
 }
 
 
