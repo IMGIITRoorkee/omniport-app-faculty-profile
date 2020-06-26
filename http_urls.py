@@ -23,6 +23,7 @@ models = [
     'Membership',
     'Book',
     'Paper',
+    'Miscellaneous'
 ]
 
 router = routers.DefaultRouter()
