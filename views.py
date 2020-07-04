@@ -2,7 +2,7 @@ import swapper
 import requests
 import logging
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import FieldDoesNotExist
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.datastructures import MultiValueDictKeyError
@@ -57,6 +57,18 @@ def return_viewset(class_name):
             faculty_member = get_role(self.request.person, 'FacultyMember')
             return Model.objects.filter(faculty_member=faculty_member)
 
+        def create(self, request, *args, **kwargs):
+            """
+            Modifying create method to integrity errors
+            """
+            try:
+                return super().create(request, *args, **kwargs)
+            except IntegrityError as e:
+                if 'unique constraint' in e.args[0]:
+                    return Response({"Error": ["Object already exists."]}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({"Error": e.args}, status=status.HTTP_400_BAD_REQUEST)
+
         def perform_create(self, serializer):
             """
             modifying perform_create for all the views to get FacultyMember
@@ -64,7 +76,19 @@ def return_viewset(class_name):
             """
             faculty_member = get_role(self.request.person, 'FacultyMember')
             serializer.save(faculty_member=faculty_member)
-            
+
+        def update(self, request, *args, **kwargs):
+            """
+            Modifying update method to integrity errors
+            """
+            try:
+                return super().update(request, *args, **kwargs)
+            except IntegrityError as e:
+                if 'unique constraint' in e.args[0]:
+                    return Response({"Error": ["Object already exists."]}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({"Error": e.args}, status=status.HTTP_400_BAD_REQUEST)
+
     return Viewset
 
 
