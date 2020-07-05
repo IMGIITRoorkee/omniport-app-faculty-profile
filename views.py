@@ -47,6 +47,7 @@ def return_viewset(class_name):
         """
         API endpoint that allows models to be viewed or edited.
         """
+
         serializer_class = serializer_dict[class_name]
         permission_classes = (IsFacultyMember, )
         pagination_class = None
@@ -59,15 +60,16 @@ def return_viewset(class_name):
 
         def create(self, request, *args, **kwargs):
             """
-            Modifying create method to integrity errors
+            Modify create method to catch integrity errors
             """
+
             try:
                 return super().create(request, *args, **kwargs)
-            except IntegrityError as e:
-                if 'unique constraint' in e.args[0]:
-                    return Response({"Error": ["Object already exists."]}, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    return Response({"Error": e.args}, status=status.HTTP_400_BAD_REQUEST)
+            except IntegrityError as error:
+                return Response(
+                    {'Fatal error': [error.__cause__.diag.message_detail]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         def perform_create(self, serializer):
             """
@@ -79,15 +81,16 @@ def return_viewset(class_name):
 
         def update(self, request, *args, **kwargs):
             """
-            Modifying update method to integrity errors
+            Modify update method to catch integrity errors
             """
+
             try:
                 return super().update(request, *args, **kwargs)
-            except IntegrityError as e:
-                if 'unique constraint' in e.args[0]:
-                    return Response({"Error": ["Object already exists."]}, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    return Response({"Error": e.args}, status=status.HTTP_400_BAD_REQUEST)
+            except IntegrityError as error:
+                return Response(
+                    {'Fatal error': [error.__cause__.diag.message_detail]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
     return Viewset
 
