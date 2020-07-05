@@ -2,7 +2,7 @@ import swapper
 import requests
 import logging
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import FieldDoesNotExist
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.datastructures import MultiValueDictKeyError
@@ -47,6 +47,7 @@ def return_viewset(class_name):
         """
         API endpoint that allows models to be viewed or edited.
         """
+
         serializer_class = serializer_dict[class_name]
         permission_classes = (IsFacultyMember, )
         pagination_class = None
@@ -57,6 +58,19 @@ def return_viewset(class_name):
             faculty_member = get_role(self.request.person, 'FacultyMember')
             return Model.objects.filter(faculty_member=faculty_member)
 
+        def create(self, request, *args, **kwargs):
+            """
+            Modify create method to catch integrity errors
+            """
+
+            try:
+                return super().create(request, *args, **kwargs)
+            except IntegrityError as error:
+                return Response(
+                    {'Fatal error': [error.__cause__.diag.message_detail]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         def perform_create(self, serializer):
             """
             modifying perform_create for all the views to get FacultyMember
@@ -64,7 +78,20 @@ def return_viewset(class_name):
             """
             faculty_member = get_role(self.request.person, 'FacultyMember')
             serializer.save(faculty_member=faculty_member)
-            
+
+        def update(self, request, *args, **kwargs):
+            """
+            Modify update method to catch integrity errors
+            """
+
+            try:
+                return super().update(request, *args, **kwargs)
+            except IntegrityError as error:
+                return Response(
+                    {'Fatal error': [error.__cause__.diag.message_detail]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
     return Viewset
 
 
