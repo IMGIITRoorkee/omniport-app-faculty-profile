@@ -56,7 +56,7 @@ def return_viewset(class_name):
         def get_queryset(self):
             Model = swapper.load_model('faculty_biodata', class_name)
             faculty_member = get_role(self.request.person, 'FacultyMember')
-            return Model.objects.filter(faculty_member=faculty_member)
+            return Model.objects.filter(faculty_member=faculty_member).order_by('priority')
 
         def create(self, request, *args, **kwargs):
             """
