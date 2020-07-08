@@ -4,7 +4,7 @@ import logging
 
 from django.db import transaction, IntegrityError
 from django.db.models import FieldDoesNotExist
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.datastructures import MultiValueDictKeyError
 
 from rest_framework.views import APIView
@@ -70,6 +70,11 @@ def return_viewset(class_name):
                     {'Fatal error': [error.__cause__.diag.message_detail]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            except ValidationError as error:
+                return Response(
+                    error.message_dict,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         def perform_create(self, serializer):
             """
@@ -89,6 +94,11 @@ def return_viewset(class_name):
             except IntegrityError as error:
                 return Response(
                     {'Fatal error': [error.__cause__.diag.message_detail]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except ValidationError as error:
+                return Response(
+                    error.message_dict,
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
