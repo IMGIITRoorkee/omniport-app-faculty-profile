@@ -5,7 +5,15 @@ description: Create your official profile page
 baseUrls:
   http: faculty_profile/
   ws: faculty_profile/
+  static: faculty_profile/
 acceptables:
+  ipAddressRings:
+    - internet
+    - intranet
+    - maintainers
+    - specifics
+    - administrator
+    - self
   roles:
     - name: FacultyMember
       activeStatuses:
