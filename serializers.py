@@ -1,5 +1,7 @@
 import swapper
 
+from faculty_biodata.constants.semesters import SEMESTER_TYPES
+
 from rest_framework import serializers
 
 serializer_dict = {
@@ -41,6 +43,10 @@ def return_serializer(class_name):
 
         if hasattr(Model, 'has_already_ended'):
             is_completed = serializers.SerializerMethodField()
+            status_type = serializers.SerializerMethodField()
+
+        if hasattr(Model, 'semester'):
+            semester_name = serializers.SerializerMethodField()
 
         class Meta:
             """
@@ -58,7 +64,28 @@ def return_serializer(class_name):
 
             return instance.has_already_ended
 
+        def get_status_type(self, instance):
+            """
+            Returns status type for instance 
+            :return: if the duration of an instance has ended
+            """
+
+            return "A" if instance.has_already_ended else "O"
+
+        def get_semester_name(self, instance):
+            """
+            Returns semester name from semester annotations. i.e Spring for s.
+            :return: semester name from semester annotations
+            """
+
+            for sem in SEMESTER_TYPES:
+                if sem[0] == instance.semester:
+                    return sem[1]
+            
+            return ""
+
     return Serializer
+
 
 for key in serializer_dict:
     serializer_dict[key] = return_serializer(key)
