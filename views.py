@@ -1,11 +1,13 @@
 import swapper
 import requests
 import logging
+import csv
 
 from django.db import transaction, IntegrityError
 from django.db.models import FieldDoesNotExist
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.datastructures import MultiValueDictKeyError
+from django.http import HttpResponse
 
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -347,3 +349,30 @@ class CMSIntegrationView(APIView):
                 'Unidentified Error',
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class CSVImportExport(APIView):
+    """
+    API endpoint that allows importing and exporting csv files
+    """
+
+    def get(self, request, *args, **kwargs):
+        """
+        Returns a blank xlsx file for given model
+        :return: a blank xlsx file for given model
+        """
+
+        model_name = request.GET['model']
+        Model = swapper.load_model('faculty_biodata', model_name)
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{model_name}.xlsx"'
+
+        all_fields = Model._meta.get_fields()
+        exclude_fields = ['id', 'datetime_created', 'datetime_modified', 'faculty_member']
+        column_headers = [field.name for field in all_fields if field.name not in exclude_fields]
+
+        writer = csv.writer(response)
+        writer.writerow(column_headers)
+
+        return response

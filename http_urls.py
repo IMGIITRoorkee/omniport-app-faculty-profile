@@ -4,6 +4,7 @@ import inflection
 from faculty_profile.views import (
     CMSIntegrationView,
     DragAndDropView,
+    CSVImportExport,
     viewset_dict,
 )
 
@@ -38,5 +39,6 @@ for model in models:
 urlpatterns = [
     url(r'rearrange', DragAndDropView.as_view()),
     url(r'cms', CMSIntegrationView.as_view()),
+    url(r'csv', CSVImportExport.as_view()),
     url(r'^', include(router.urls)),
 ]
