@@ -5,7 +5,7 @@ import csv
 
 from django.db import transaction, IntegrityError
 from django.db.models import FieldDoesNotExist
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError, ImproperlyConfigured
 from django.utils.datastructures import MultiValueDictKeyError
 from django.http import HttpResponse
 
@@ -351,28 +351,40 @@ class CMSIntegrationView(APIView):
             )
 
 
-class CSVImportExport(APIView):
+class WriteAppendMultipleObjects(APIView):
     """
     API endpoint that allows importing and exporting csv files
     """
 
     def get(self, request, *args, **kwargs):
         """
-        Returns a blank xlsx file for given model
-        :return: a blank xlsx file for given model
+        Returns a blank csv file with xlsx extenstion for given model
+        :return: a blank csv file with xlsx extension for given model
         """
 
-        model_name = request.GET['model']
-        Model = swapper.load_model('faculty_biodata', model_name)
+        model_name = request.GET.get('model')
+        if model_name is None:
+            return Response(
+                { 'Error': ['Model parameter is missing.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="{model_name}.xlsx"'
+        try:
+            Model = swapper.load_model('faculty_biodata', model_name)
 
-        all_fields = Model._meta.get_fields()
-        exclude_fields = ['id', 'datetime_created', 'datetime_modified', 'faculty_member']
-        column_headers = [field.name for field in all_fields if field.name not in exclude_fields]
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename={model_name}.xlsx'
 
-        writer = csv.writer(response)
-        writer.writerow(column_headers)
+            all_fields = Model._meta.get_fields()
+            exclude_fields = ['id', 'datetime_created', 'datetime_modified', 'faculty_member', 'file']
+            column_headers = [field.name for field in all_fields if field.name not in exclude_fields]
 
-        return response
+            writer = csv.writer(response)
+            writer.writerow(column_headers)
+
+            return response
+        except ImproperlyConfigured:
+            return Response(
+                { 'Invalid model' : ['Model doesn\'t exists.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
