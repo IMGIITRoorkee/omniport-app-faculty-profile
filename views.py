@@ -327,10 +327,10 @@ class CMSIntegrationView(APIView):
             )
 
         if response.status_code == 205:
-            logger.info(f'{user} successfully made a publish request')
+            logger.info(f'{user} successfully made a {action} request')
             return Response(response.json())
         elif response.status_code == 403:
-            logger.warning(f'{user} made a forbidden publish request')
+            logger.warning(f'{user} made a forbidden {action} request')
             return Response(
                 'Authorization Error',
                 status=status.HTTP_403_FORBIDDEN,
