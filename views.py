@@ -2,6 +2,8 @@ import swapper
 import requests
 import logging
 import csv
+import pandas as pd
+from pandas.io.parsers import ParserError
 
 from django.db import transaction, IntegrityError
 from django.db.models import FieldDoesNotExist
@@ -388,3 +390,73 @@ class WriteAppendMultipleObjects(APIView):
                 { 'Invalid model' : ['Model doesn\'t exists.'] },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    def post(self, request, *args, **kwargs):
+        """
+        Adds data from uploaded file in corresponding model
+        """
+
+        up_file = request.FILES.get('csv')
+
+        # Check if it is parseble by read_csv()
+        valid_exts = ['xlsx', 'xls', 'csv', 'gz']
+        file_ext = up_file.name.split('.')[1].lower()
+        if file_ext not in valid_exts:
+            return Response(
+                { 'Invalid file' : ['Only xls, xlsx, csv, csv.gz files are allowed.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = request.data
+        model_name = data.get('model')
+        Model = models[model_name]
+        serializer = serializer_dict[model_name]
+        faculty_member = get_role(self.request.person, 'FacultyMember')
+
+        try:
+            df = pd.read_csv(up_file, encoding = "utf-8", keep_default_na=False)
+
+            # Remove keys which doesn't have any value, from all the objects
+            actual_data = [{
+                key: value for key, value in obj.items() if value
+            } for obj in df.to_dict('records')]
+
+            with transaction.atomic():
+                up_type = data.get('upload_type')
+                if up_type == 'new':
+                    Model.objects.filter(faculty_member=faculty_member).all().delete()
+                # This is necessary because `bulk_create` doesn't validate data itself
+                instances = []
+                for vals in actual_data:
+                    instance = Model(faculty_member=faculty_member, **vals)
+                    instance.full_clean()
+                    instances.append(instance)
+                Model.objects.bulk_create(instances)
+        except ParserError:
+            return Response(
+                {
+                    "Error" : ['You have uploaded a malformed file that isn\'t parceble.'],
+                    "Suggestion" : ['You can use the given sample file to add your data.']
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValidationError as error:
+            return Response(
+                error.message_dict,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except TypeError:
+            return Response(
+                {
+                    "Error" : ['Column headers are not correct in your uploaded file.'],
+                    "Suggestion" : ['You can use the given sample file to add your data.']
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except:
+            return Response(
+                { 'Error' : ['There are some problems with uploaded file.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        objects = Model.objects.filter(faculty_member=faculty_member)
+        return Response(serializer(objects.order_by('priority'), many=True).data)
