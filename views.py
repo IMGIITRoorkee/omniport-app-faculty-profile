@@ -360,8 +360,8 @@ class WriteAppendMultipleObjects(APIView):
 
     def get(self, request, *args, **kwargs):
         """
-        Returns a blank csv file with xlsx extenstion for given model
-        :return: a blank csv file with xlsx extension for given model
+        Returns a blank csv file for given model
+        :return: a blank csv file for given model
         """
 
         model_name = request.GET.get('model')
@@ -375,7 +375,7 @@ class WriteAppendMultipleObjects(APIView):
             Model = swapper.load_model('faculty_biodata', model_name)
 
             response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename={model_name}.xlsx'
+            response['Content-Disposition'] = f'attachment; filename={model_name}.csv'
 
             all_fields = Model._meta.get_fields()
             exclude_fields = ['id', 'datetime_created', 'datetime_modified', 'faculty_member', 'file']
@@ -396,7 +396,12 @@ class WriteAppendMultipleObjects(APIView):
         Adds data from uploaded file in corresponding model
         """
 
-        up_file = request.FILES.get('csv')
+        up_file = request.FILES.get('file')
+        if up_file is None:
+            return Response(
+                { 'Error': ['Upload file parameter is missing.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Check if it is parseble by read_csv()
         valid_exts = ['xlsx', 'xls', 'csv', 'gz']
@@ -409,7 +414,21 @@ class WriteAppendMultipleObjects(APIView):
 
         data = request.data
         model_name = data.get('model')
-        Model = models[model_name]
+
+        # Check if model parameter is valid
+        if model_name is None:
+            return Response(
+                { 'Error': ['Model parameter is missing.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            Model = swapper.load_model('faculty_biodata', model_name)
+        except ImproperlyConfigured:
+            return Response(
+                { 'Invalid model' : ['Model doesn\'t exists.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         serializer = serializer_dict[model_name]
         faculty_member = get_role(self.request.person, 'FacultyMember')
 
@@ -423,6 +442,21 @@ class WriteAppendMultipleObjects(APIView):
 
             with transaction.atomic():
                 up_type = data.get('upload_type')
+
+                # Check if upload type is valid
+                valid_types = ['append', 'new']
+                if up_type is None:
+                    return Response(
+                        { 'Error': ['Upload type parameter is missing.'] },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                if up_type not in valid_types:
+                    return Response(
+                        { 'Error': ['Upload type doesn\'t exists.'] },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Parse data and add instances to model
                 if up_type == 'new':
                     Model.objects.filter(faculty_member=faculty_member).all().delete()
                 # This is necessary because `bulk_create` doesn't validate data itself
@@ -452,11 +486,6 @@ class WriteAppendMultipleObjects(APIView):
                     "Suggestion" : ['You can use the given sample file to add your data.']
                 },
                 status=status.HTTP_400_BAD_REQUEST,
-            )
-        except:
-            return Response(
-                { 'Error' : ['There are some problems with uploaded file.'] },
-                status=status.HTTP_400_BAD_REQUEST
             )
         objects = Model.objects.filter(faculty_member=faculty_member)
         return Response(serializer(objects.order_by('priority'), many=True).data)
