@@ -437,7 +437,8 @@ class WriteAppendMultipleObjects(APIView):
 
             # Remove keys which doesn't have any value, from all the objects
             actual_data = [{
-                key: value for key, value in obj.items() if value
+                key: value.strip() if isinstance(value, str) else value
+                for key, value in obj.items() if len(str(value)) > 0
             } for obj in df.to_dict('records')]
 
             with transaction.atomic():
