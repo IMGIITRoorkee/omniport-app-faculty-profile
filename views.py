@@ -378,8 +378,19 @@ class WriteAppendMultipleObjects(APIView):
             response['Content-Disposition'] = f'attachment; filename={model_name}.csv'
 
             all_fields = Model._meta.get_fields()
-            exclude_fields = ['id', 'datetime_created', 'datetime_modified', 'faculty_member', 'file']
-            column_headers = [field.name for field in all_fields if field.name not in exclude_fields]
+            exclude_fields = [
+                'id',
+                'datetime_created',
+                'datetime_modified',
+                'faculty_member',
+                'file',
+                'paper'
+            ]
+            column_headers = [
+                field.name
+                for field in all_fields
+                if field.name not in exclude_fields
+            ]
 
             writer = csv.writer(response)
             writer.writerow(column_headers)
@@ -387,7 +398,7 @@ class WriteAppendMultipleObjects(APIView):
             return response
         except ImproperlyConfigured:
             return Response(
-                { 'Invalid model' : ['Model doesn\'t exists.'] },
+                { 'Invalid model': ['Model doesn\'t exists.'] },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -408,7 +419,7 @@ class WriteAppendMultipleObjects(APIView):
         file_ext = up_file.name.split('.')[1].lower()
         if file_ext not in valid_exts:
             return Response(
-                { 'Invalid file' : ['Only xls, xlsx, csv, csv.gz files are allowed.'] },
+                { 'Invalid file': ['Only xls, xlsx, csv, csv.gz files are allowed.'] },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -425,7 +436,7 @@ class WriteAppendMultipleObjects(APIView):
             Model = swapper.load_model('faculty_biodata', model_name)
         except ImproperlyConfigured:
             return Response(
-                { 'Invalid model' : ['Model doesn\'t exists.'] },
+                { 'Invalid model': ['Model doesn\'t exists.'] },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -433,7 +444,7 @@ class WriteAppendMultipleObjects(APIView):
         faculty_member = get_role(self.request.person, 'FacultyMember')
 
         try:
-            df = pd.read_csv(up_file, encoding = "utf-8", keep_default_na=False)
+            df = pd.read_csv(up_file, encoding='utf-8', keep_default_na=False)
 
             # Remove keys which doesn't have any value, from all the objects
             actual_data = [{
@@ -467,11 +478,12 @@ class WriteAppendMultipleObjects(APIView):
                     instance.full_clean()
                     instances.append(instance)
                 Model.objects.bulk_create(instances)
-        except ParserError:
+        # read_csv() cannot parse if the uploaded file doesn't have 'utf-8' encoding.
+        except (ParserError, UnicodeDecodeError):
             return Response(
                 {
-                    "Error" : ['You have uploaded a malformed file that isn\'t parceble.'],
-                    "Suggestion" : ['You can use the given sample file to add your data.']
+                    'Error': ['You have uploaded a malformed file that isn\'t parsable.'],
+                    'Suggestion': ['You can use the given sample file to add your data.']
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -483,8 +495,8 @@ class WriteAppendMultipleObjects(APIView):
         except TypeError:
             return Response(
                 {
-                    "Error" : ['Column headers are not correct in your uploaded file.'],
-                    "Suggestion" : ['You can use the given sample file to add your data.']
+                    'Error': ['Column headers are not correct in your uploaded file.'],
+                    'Suggestion': ['You can use the given sample file to add your data.']
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
