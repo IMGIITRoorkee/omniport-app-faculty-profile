@@ -24,6 +24,7 @@ from omniport.settings.configuration.base import CONFIGURATION
 
 from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
+from faculty_profile.constants.exclude_fields import exclude_fields
 
 logger = logging.getLogger('faculty_profile')
 
@@ -358,6 +359,8 @@ class WriteAppendMultipleObjects(APIView):
     API endpoint that allows importing and exporting csv files
     """
 
+    permission_classes = (IsFacultyMember, )
+
     def get(self, request, *args, **kwargs):
         """
         Returns a blank csv file for given model
@@ -378,14 +381,6 @@ class WriteAppendMultipleObjects(APIView):
             response['Content-Disposition'] = f'attachment; filename={model_name}.csv'
 
             all_fields = Model._meta.get_fields()
-            exclude_fields = [
-                'id',
-                'datetime_created',
-                'datetime_modified',
-                'faculty_member',
-                'file',
-                'paper'
-            ]
             column_headers = [
                 field.name
                 for field in all_fields
@@ -434,6 +429,12 @@ class WriteAppendMultipleObjects(APIView):
             )
         try:
             Model = swapper.load_model('faculty_biodata', model_name)
+            all_fields = Model._meta.get_fields()
+            column_headers = [
+                field.name
+                for field in all_fields
+                if field.name not in exclude_fields
+            ]
         except ImproperlyConfigured:
             return Response(
                 { 'Invalid model': ['Model doesn\'t exists.'] },
@@ -445,6 +446,11 @@ class WriteAppendMultipleObjects(APIView):
 
         try:
             df = pd.read_csv(up_file, encoding='utf-8', keep_default_na=False)
+
+            # Check if column headers are correct of not
+            data_headers = df.columns.values.tolist()
+            if not column_headers == data_headers:
+                raise TypeError
 
             # Remove keys which doesn't have any value, from all the objects
             actual_data = [{
