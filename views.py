@@ -368,8 +368,10 @@ class WriteAppendMultipleObjects(APIView):
         :return: a blank csv file for given model
         """
 
+        user = request.user.username
         model_name = request.GET.get('model')
         if model_name is None:
+            logger.warning('Model parameter is missing in get request.')
             return Response(
                 { 'Error': ['Model parameter is missing.'] },
                 status=status.HTTP_400_BAD_REQUEST
@@ -393,6 +395,7 @@ class WriteAppendMultipleObjects(APIView):
 
             return response
         except ImproperlyConfigured:
+            logger.warning(f'{user} sent an invalid model in get request.')
             return Response(
                 { 'Invalid model': ['Model doesn\'t exists.'] },
                 status=status.HTTP_400_BAD_REQUEST
@@ -403,8 +406,10 @@ class WriteAppendMultipleObjects(APIView):
         Adds data from uploaded file in corresponding model
         """
 
+        user = request.user.username
         up_file = request.FILES.get('file')
         if up_file is None:
+            logger.warning('File is missing in post request.')
             return Response(
                 { 'Error': ['Upload file parameter is missing.'] },
                 status=status.HTTP_400_BAD_REQUEST
@@ -414,6 +419,7 @@ class WriteAppendMultipleObjects(APIView):
         valid_mimetypes = ['text/csv']
         file_ext = mimetypes.guess_type(up_file.name)[0] # Get the type   
         if file_ext not in valid_mimetypes:
+            logger.warning(f'{user} tried to upload an invalid file.')
             return Response(
                 { 'Invalid file': ['Only CSV files are allowed.'] },
                 status=status.HTTP_400_BAD_REQUEST
@@ -424,6 +430,7 @@ class WriteAppendMultipleObjects(APIView):
 
         # Check if model parameter is valid
         if model_name is None:
+            logger.warning('Model parameter is missing in post request.')
             return Response(
                 { 'Error': ['Model parameter is missing.'] },
                 status=status.HTTP_400_BAD_REQUEST
@@ -437,6 +444,7 @@ class WriteAppendMultipleObjects(APIView):
                 if field.name not in exclude_fields
             ]
         except ImproperlyConfigured:
+            logger.warning(f'{user} sent an invalid model in post request.')
             return Response(
                 { 'Invalid model': ['Model doesn\'t exists.'] },
                 status=status.HTTP_400_BAD_REQUEST
@@ -465,11 +473,13 @@ class WriteAppendMultipleObjects(APIView):
                 # Check if upload type is valid
                 valid_types = ['append', 'new']
                 if up_type is None:
+                    logger.warning('Upload type parameter is missing.')
                     return Response(
                         { 'Error': ['Upload type parameter is missing.'] },
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 if up_type not in valid_types:
+                    logger.warning(f'{user} sent an invalid upload type.')
                     return Response(
                         { 'Error': ['Upload type doesn\'t exists.'] },
                         status=status.HTTP_400_BAD_REQUEST
@@ -484,9 +494,11 @@ class WriteAppendMultipleObjects(APIView):
                     instance = Model(faculty_member=faculty_member, **vals)
                     instance.full_clean()
                     instances.append(instance)
+                logger.info(f'{user} uploaded data in {model_name} via csv file.')
                 Model.objects.bulk_create(instances)
         # read_csv() cannot parse if the uploaded file doesn't have 'utf-8' encoding.
         except (ParserError, UnicodeDecodeError):
+            logger.warning(f'{user} tried to upload a unparsable file.')
             return Response(
                 {
                     'Error': ['You have uploaded a malformed file that isn\'t parsable.'],
@@ -495,11 +507,13 @@ class WriteAppendMultipleObjects(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except ValidationError as error:
+            logger.warning('Uploaded file contains invalid data.')
             return Response(
                 error.message_dict,
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except TypeError:
+            logger.warning('Column headers doesn\'t match to model fields.')
             return Response(
                 {
                     'Error': ['Column headers are not correct in your uploaded file.'],
