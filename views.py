@@ -3,6 +3,7 @@ import requests
 import logging
 import csv
 import pandas as pd
+import mimetypes
 from pandas.io.parsers import ParserError
 
 from django.db import transaction, IntegrityError
@@ -410,11 +411,11 @@ class WriteAppendMultipleObjects(APIView):
             )
 
         # Check if it is parseble by read_csv()
-        valid_exts = ['xlsx', 'xls', 'csv', 'gz']
-        file_ext = up_file.name.split('.')[1].lower()
-        if file_ext not in valid_exts:
+        valid_mimetypes = ['text/csv']
+        file_ext = mimetypes.guess_type(up_file.name)[0] # Get the type   
+        if file_ext not in valid_mimetypes:
             return Response(
-                { 'Invalid file': ['Only xls, xlsx, csv, csv.gz files are allowed.'] },
+                { 'Invalid file': ['Only CSV files are allowed.'] },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
