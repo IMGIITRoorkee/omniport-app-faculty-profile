@@ -15,7 +15,7 @@ from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.decorators import api_view, permission_classes
@@ -355,14 +355,14 @@ class CMSIntegrationView(APIView):
             )
 
 
-class WriteAppendMultipleObjects(APIView):
+class WriteAppendMultipleObjects(viewsets.ViewSet):
     """
     API endpoint that allows importing and exporting csv files
     """
 
     permission_classes = (IsFacultyMember, )
 
-    def get(self, request, *args, **kwargs):
+    def download(self, request, *args, **kwargs):
         """
         Returns a blank csv file for given model
         :return: a blank csv file for given model
@@ -394,6 +394,40 @@ class WriteAppendMultipleObjects(APIView):
             writer.writerow(column_headers)
 
             return response
+        except ImproperlyConfigured:
+            logger.warning(f'{user} sent an invalid model in get request.')
+            return Response(
+                { 'Invalid model': ['Model doesn\'t exists.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def affordance(self, request, *args, **kwargs):
+        """
+        Returns an array for affordances of given model
+        """
+
+        user = request.user.username
+        model_name = request.GET.get('model')
+        if model_name is None:
+            logger.warning('Model parameter is missing in get request.')
+            return Response(
+                { 'Error': ['Model parameter is missing.'] },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            Model = swapper.load_model('faculty_biodata', model_name)
+            all_fields = Model._meta.get_fields()
+
+            affordances = [{
+                (field.name + " (required)")
+                if not field.blank and field._get_default() is ''
+                else (field.name)
+                :
+                (field.description % field.__dict__)
+            } for field in all_fields if field.name not in exclude_fields]
+
+            return Response(affordances, status=status.HTTP_200_OK)
         except ImproperlyConfigured:
             logger.warning(f'{user} sent an invalid model in get request.')
             return Response(
