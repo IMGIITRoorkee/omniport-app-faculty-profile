@@ -8,7 +8,11 @@ from pandas.io.parsers import ParserError
 
 from django.db import transaction, IntegrityError
 from django.db.models import FieldDoesNotExist
-from django.core.exceptions import ObjectDoesNotExist, ValidationError, ImproperlyConfigured
+from django.core.exceptions import (
+    ObjectDoesNotExist,
+    ValidationError,
+    ImproperlyConfigured
+)
 from django.utils.datastructures import MultiValueDictKeyError
 from django.http import HttpResponse
 
@@ -25,7 +29,6 @@ from omniport.settings.configuration.base import CONFIGURATION
 
 from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
-from faculty_profile.constants.exclude_fields import exclude_fields
 
 logger = logging.getLogger('faculty_profile')
 
@@ -360,7 +363,16 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
     API endpoint that allows importing and exporting csv files
     """
 
-    permission_classes = (IsFacultyMember, )
+    exclude_fields = [
+        'id',
+        'datetime_created',
+        'datetime_modified',
+        'faculty_member',
+        'file',
+        'paper'
+    ]
+
+    permission_classes = [IsFacultyMember]
 
     def download(self, request, *args, **kwargs):
         """
@@ -368,26 +380,30 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
         :return: a blank csv file for given model
         """
 
-        user = request.user.username
+        username = request.user.username
         model_name = request.GET.get('model')
         if model_name is None:
-            logger.warning('Model parameter is missing in get request.')
+            logger.warning(
+                f'{username} didn\'t send model parameter in get request.'
+            )
             return Response(
                 { 'Error': ['Model parameter is missing.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             Model = swapper.load_model('faculty_biodata', model_name)
 
             response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename={model_name}.csv'
+            response['Content-Disposition'] = (
+                f'attachment; filename={model_name}.csv'
+            )
 
             all_fields = Model._meta.get_fields()
             column_headers = [
                 field.name
                 for field in all_fields
-                if field.name not in exclude_fields
+                if field.name not in self.exclude_fields
             ]
 
             writer = csv.writer(response)
@@ -395,24 +411,28 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
 
             return response
         except ImproperlyConfigured:
-            logger.warning(f'{user} sent an invalid model in get request.')
+            logger.warning(
+                f'{username} sent an invalid model in get request.'
+            )
             return Response(
                 { 'Invalid model': ['Model doesn\'t exists.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
     def affordance(self, request, *args, **kwargs):
         """
-        Returns an array for affordances of given model
+        Returns an array of affordances of given model
         """
 
-        user = request.user.username
+        username = request.user.username
         model_name = request.GET.get('model')
         if model_name is None:
-            logger.warning('Model parameter is missing in get request.')
+            logger.warning(
+                f'{username} didn\'t send model parameter in get request.'
+            )
             return Response(
                 { 'Error': ['Model parameter is missing.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -420,19 +440,22 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
             all_fields = Model._meta.get_fields()
 
             affordances = [{
-                (field.name + " (required)")
-                if not field.blank and field._get_default() is ''
+                (f'{field.name} (required)')
+                if not field.blank and field._get_default() == ''
                 else (field.name)
                 :
                 (field.description % field.__dict__)
-            } for field in all_fields if field.name not in exclude_fields]
+            } for field in all_fields
+            if field.name not in self.exclude_fields]
 
             return Response(affordances, status=status.HTTP_200_OK)
         except ImproperlyConfigured:
-            logger.warning(f'{user} sent an invalid model in get request.')
+            logger.warning(
+                f'{username} sent an invalid model in get request.'
+            )
             return Response(
                 { 'Invalid model': ['Model doesn\'t exists.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
     def post(self, request, *args, **kwargs):
@@ -440,23 +463,23 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
         Adds data from uploaded file in corresponding model
         """
 
-        user = request.user.username
-        up_file = request.FILES.get('file')
-        if up_file is None:
+        username = request.user.username
+        uploaded_file = request.FILES.get('file')
+        if uploaded_file is None:
             logger.warning('File is missing in post request.')
             return Response(
-                { 'Error': ['Upload file parameter is missing.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                { 'Error': ['No file uploaded.'] },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Check if it is parseble by read_csv()
         valid_mimetypes = ['text/csv']
-        file_ext = mimetypes.guess_type(up_file.name)[0] # Get the type   
+        file_ext = mimetypes.guess_type(uploaded_file.name)[0] # Get the type
         if file_ext not in valid_mimetypes:
-            logger.warning(f'{user} tried to upload an invalid file.')
+            logger.warning(f'{username} tried to upload an invalid file.')
             return Response(
                 { 'Invalid file': ['Only CSV files are allowed.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         data = request.data
@@ -464,10 +487,12 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
 
         # Check if model parameter is valid
         if model_name is None:
-            logger.warning('Model parameter is missing in post request.')
+            logger.warning(
+                f'{username} didn\'t send model parameter in get request.'
+            )
             return Response(
                 { 'Error': ['Model parameter is missing.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
         try:
             Model = swapper.load_model('faculty_biodata', model_name)
@@ -475,20 +500,22 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
             column_headers = [
                 field.name
                 for field in all_fields
-                if field.name not in exclude_fields
+                if field.name not in self.exclude_fields
             ]
         except ImproperlyConfigured:
-            logger.warning(f'{user} sent an invalid model in post request.')
+            logger.warning(
+                f'{username} sent an invalid model in post request.'
+            )
             return Response(
                 { 'Invalid model': ['Model doesn\'t exists.'] },
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = serializer_dict[model_name]
         faculty_member = get_role(self.request.person, 'FacultyMember')
 
         try:
-            df = pd.read_csv(up_file, encoding='utf-8', keep_default_na=False)
+            df = pd.read_csv(uploaded_file, encoding='utf-8', keep_default_na=False)
 
             # Check if column headers are correct of not
             data_headers = df.columns.values.tolist()
@@ -502,41 +529,52 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
             } for obj in df.to_dict('records')]
 
             with transaction.atomic():
-                up_type = data.get('upload_type')
+                uploaded_type = data.get('upload_type')
 
                 # Check if upload type is valid
                 valid_types = ['append', 'new']
-                if up_type is None:
+                if uploaded_type is None:
                     logger.warning('Upload type parameter is missing.')
                     return Response(
                         { 'Error': ['Upload type parameter is missing.'] },
-                        status=status.HTTP_400_BAD_REQUEST
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
-                if up_type not in valid_types:
-                    logger.warning(f'{user} sent an invalid upload type.')
+                if uploaded_type not in valid_types:
+                    logger.warning(f'{username} sent an invalid upload type.')
                     return Response(
                         { 'Error': ['Upload type doesn\'t exists.'] },
-                        status=status.HTTP_400_BAD_REQUEST
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
 
                 # Parse data and add instances to model
-                if up_type == 'new':
-                    Model.objects.filter(faculty_member=faculty_member).all().delete()
-                # This is necessary because `bulk_create` doesn't validate data itself
+                if uploaded_type == 'new':
+                    Model.objects.filter(faculty_member=faculty_member) \
+                    .all() \
+                    .delete()
+                # This is necessary because `bulk_create` doesn't validate
+                # data itself
                 instances = []
                 for vals in actual_data:
                     instance = Model(faculty_member=faculty_member, **vals)
                     instance.full_clean()
                     instances.append(instance)
-                logger.info(f'{user} uploaded data in {model_name} via csv file.')
+                logger.info(
+                    f'{username} uploaded data in {model_name} via csv file.'
+                )
                 Model.objects.bulk_create(instances)
-        # read_csv() cannot parse if the uploaded file doesn't have 'utf-8' encoding.
+        # read_csv() cannot parse if the uploaded file doesn't have 'utf-8'
+        # encoding.
         except (ParserError, UnicodeDecodeError):
-            logger.warning(f'{user} tried to upload a unparsable file.')
+            logger.warning(f'{username} tried to upload a unparsable file.')
             return Response(
                 {
-                    'Error': ['You have uploaded a malformed file that isn\'t parsable.'],
-                    'Suggestion': ['You can use the given sample file to add your data.']
+                    'Error': [
+                        'You have uploaded a malformed file that isn\'t' \
+                        'parsable.'
+                    ],
+                    'Suggestion': [
+                        'You can use the given sample file to add your data.'
+                    ]
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -550,10 +588,16 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
             logger.warning('Column headers doesn\'t match to model fields.')
             return Response(
                 {
-                    'Error': ['Column headers are not correct in your uploaded file.'],
-                    'Suggestion': ['You can use the given sample file to add your data.']
+                    'Error': [
+                        'Uploaded file has incorrect column headers.'
+                    ],
+                    'Suggestion': [
+                        'You can use the given sample file to add your data.'
+                    ]
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         objects = Model.objects.filter(faculty_member=faculty_member)
-        return Response(serializer(objects.order_by('priority'), many=True).data)
+        return Response(
+            serializer(objects.order_by('priority'), many=True).data
+        )

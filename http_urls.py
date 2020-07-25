@@ -39,8 +39,12 @@ for model in models:
 urlpatterns = [
     url(r'rearrange', DragAndDropView.as_view()),
     url(r'cms', CMSIntegrationView.as_view()),
-    url(r'csv/download', WriteAppendMultipleObjects.as_view(actions={'get': 'download'})),
-    url(r'csv/affordances', WriteAppendMultipleObjects.as_view(actions={'get': 'affordance'})),
+    url(r'csv/download', WriteAppendMultipleObjects.as_view(
+        actions={'get': 'download'})
+    ),
+    url(r'csv/affordances', WriteAppendMultipleObjects.as_view(
+        actions={'get': 'affordance'})
+    ),
     url(r'csv', WriteAppendMultipleObjects.as_view(actions={'post': 'post'})),
     url(r'^', include(router.urls)),
 ]
