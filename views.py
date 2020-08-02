@@ -67,23 +67,42 @@ def return_viewset(class_name):
             faculty_member = get_role(self.request.person, 'FacultyMember')
             return Model.objects.filter(faculty_member=faculty_member).order_by('priority')
 
-        def create(self, request, *args, **kwargs):
+        def exception_handler(func):
             """
-            Modify create method to catch integrity errors
+            Decorator to add exception handling to create and update methods.
+            :param func: function to apply this decorator over
+
+            :return: a function which raises an error if the passed function
+            raises an error
             """
 
-            try:
-                return super().create(request, *args, **kwargs)
-            except IntegrityError as error:
-                return Response(
-                    {'Fatal error': [error.__cause__.diag.message_detail]},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            except ValidationError as error:
-                return Response(
-                    error.message_dict,
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            def raise_error(*args, **kwargs):
+                """
+                Wrapper function to raise error
+                """
+
+                try:
+                    return func(*args, **kwargs)
+                except IntegrityError as error:
+                    return Response(
+                        {'Fatal error': [error.__cause__.diag.message_detail]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                except ValidationError as error:
+                    return Response(
+                        error.message_dict,
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            return raise_error
+
+        @exception_handler
+        def create(self, request, *args, **kwargs):
+            """
+            Modify create method to catch errors
+            """
+
+            return super().create(request, *args, **kwargs)
 
         def perform_create(self, serializer):
             """
@@ -93,23 +112,13 @@ def return_viewset(class_name):
             faculty_member = get_role(self.request.person, 'FacultyMember')
             serializer.save(faculty_member=faculty_member)
 
+        @exception_handler
         def update(self, request, *args, **kwargs):
             """
-            Modify update method to catch integrity errors
+            Modify update method to catch errors
             """
 
-            try:
-                return super().update(request, *args, **kwargs)
-            except IntegrityError as error:
-                return Response(
-                    {'Fatal error': [error.__cause__.diag.message_detail]},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            except ValidationError as error:
-                return Response(
-                    error.message_dict,
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            return super().update(request, *args, **kwargs)
 
     return Viewset
 
