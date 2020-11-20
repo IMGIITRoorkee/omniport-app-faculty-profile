@@ -29,6 +29,7 @@ from omniport.settings.configuration.base import CONFIGURATION
 
 from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
+from faculty_profile.permissions.has_data_leak_rights import CanDataLeak
 
 logger = logging.getLogger('faculty_profile')
 
@@ -610,3 +611,39 @@ class WriteAppendMultipleObjects(viewsets.ViewSet):
         return Response(
             serializer(objects.order_by('priority'), many=True).data
         )
+
+class DataLeakView(APIView):
+    """
+    Endpoint to get faculty data using their employeeId
+    """
+
+    permission_classes = (CanDataLeak,)
+    pagination_class = None
+
+    def get(self, request, *args, **kwargs):
+        employee_id = kwargs.get('employee_id')
+        if employee_id is None:
+            return Response(
+                { 'Error': ['Faculty id parameter is missing.'] },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            FacultyMember = swapper.load_model('kernel', 'facultyMember')
+            faculty_member = FacultyMember.objects.get(employee_id=employee_id)
+            response = {}
+            for key in viewset_dict:
+                Model = models[key]
+                serializer = serializer_dict[key]
+                # Profile doesn't have visibility field
+                if key == 'Profile':
+                    objects = Model.objects.filter(faculty_member=faculty_member)
+                else:
+                    objects = Model.objects.filter(
+                        faculty_member=faculty_member).filter(visibility=True)
+                response[key] = serializer(objects, many=True).data
+            return Response(response, status=status.HTTP_200_OK)
+        except FacultyMember.DoesNotExist:
+            return Response(
+                { 'Error': ['Invalid Faculty id.'] },
+                status=status.HTTP_400_BAD_REQUEST,
+            )

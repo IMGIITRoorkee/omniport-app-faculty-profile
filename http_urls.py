@@ -1,10 +1,12 @@
 from django.conf.urls import url, include
+from django.urls import path
 from rest_framework import routers
 import inflection
 from faculty_profile.views import (
     CMSIntegrationView,
     DragAndDropView,
     WriteAppendMultipleObjects,
+    DataLeakView,
     viewset_dict,
 )
 
@@ -46,5 +48,6 @@ urlpatterns = [
         actions={'get': 'affordance'})
     ),
     url(r'csv', WriteAppendMultipleObjects.as_view(actions={'post': 'post'})),
+    path('data/<int:employee_id>/', DataLeakView.as_view()),
     url(r'^', include(router.urls)),
 ]
