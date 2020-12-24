@@ -621,14 +621,22 @@ class DataLeakView(APIView):
     pagination_class = None
 
     def get(self, request, *args, **kwargs):
+        FacultyMember = swapper.load_model('kernel', 'facultyMember')
         employee_id = kwargs.get('employee_id')
         if employee_id is None:
-            return Response(
-                { 'Error': ['Faculty id parameter is missing.'] },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            faculty_members = FacultyMember.objects.all()
+            response = []
+            for faculty_member in faculty_members:
+                data = {}
+                data['id'] = faculty_member.employee_id
+                data['name'] = faculty_member.person.full_name
+                data['gender'] = faculty_member.person.biologicalinformation.sex
+                data['department'] = faculty_member.department.name
+                data['designation'] = faculty_member.get_designation_display()
+                response.append(data)
+            return Response(response, status=status.HTTP_200_OK)
+
         try:
-            FacultyMember = swapper.load_model('kernel', 'facultyMember')
             faculty_member = FacultyMember.objects.get(employee_id=employee_id)
             response = {}
             for key in viewset_dict:
