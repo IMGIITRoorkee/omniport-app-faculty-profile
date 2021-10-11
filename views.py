@@ -7,11 +7,11 @@ import mimetypes
 from pandas.io.parsers import ParserError
 
 from django.db import transaction, IntegrityError
+from django.db.models import FieldDoesNotExist
 from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
-    ImproperlyConfigured,
-    FieldDoesNotExist
+    ImproperlyConfigured
 )
 from django.utils.datastructures import MultiValueDictKeyError
 from django.http import HttpResponse
