@@ -4,7 +4,7 @@ import logging
 import csv
 import pandas as pd
 import mimetypes
-from pandas.io.parsers import ParserError
+from pandas.errors import ParserError
 
 from django.db import transaction, IntegrityError
 from django.core.exceptions import (
