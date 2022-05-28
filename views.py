@@ -7,9 +7,7 @@ import mimetypes
 from pandas.errors import ParserError
 
 from django.db import transaction, IntegrityError
-from django.db.models import FieldDoesNotExist
 from django.core.exceptions import (
-    ObjectDoesNotExist,
     ValidationError,
     ImproperlyConfigured
 )
@@ -46,6 +44,7 @@ viewset_dict = {
     'Event':None,
     'Interest':None,
     'AdministrativePosition':None,
+    'ProfessionalBackground':None,
     'Membership':None,
     'Book':None,
     'Paper':None,

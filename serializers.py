@@ -15,6 +15,7 @@ serializer_dict = {
     'Event': None,
     'Interest': None,
     'AdministrativePosition': None,
+    'ProfessionalBackground':None,
     'Membership': None,
     'Book': None,
     'Paper': None,
