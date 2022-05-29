@@ -6,10 +6,12 @@ import pandas as pd
 import mimetypes
 from pandas.errors import ParserError
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 from django.core.exceptions import (
     ValidationError,
-    ImproperlyConfigured
+    ImproperlyConfigured,
 )
 from django.utils.datastructures import MultiValueDictKeyError
 from django.http import HttpResponse
@@ -326,25 +328,28 @@ class CMSIntegrationView(APIView):
         data = {}
         data['username'] = request.person.user.username
         data['token'] = self.CMS.get('facapp_token')
+        data['dept'] = request.person.facultymember.department.name
+        data['employee_id'] = request.person.facultymember.employee_id
+
 
         user = request.user.username
 
         host = self.CMS.get('host')
         faculty_url = self.CMS.get('faculty_url')
         action = request.data.get('action')
-        url = f'{host}{faculty_url}{action}'
+        url = f'{faculty_url}'
         
         try:
             # Remove `verify=False` when CMS adds chain certificate
-            response = requests.post(url, data, timeout=5, verify=False)
-        except:
-            logger.info('CMS is not responding to requests')
+            response = requests.post(url, data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
             return Response(
                 'Connection Refused',
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        if response.status_code == 205:
+        if response.status_code == 200:
             logger.info(f'{user} successfully made a {action} request')
             return Response(response.json())
         elif response.status_code == 403:
@@ -360,7 +365,7 @@ class CMSIntegrationView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         else:
-            logger.warning('CMS responded with an unidentified error')
+            logger.warning(f'CMS responded with an unidentified error -- {response.status_code} -- {response.content}')
             return Response(
                 'Unidentified Error',
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -619,16 +624,54 @@ class DataLeakView(APIView):
     permission_classes = (CanDataLeak,)
     pagination_class = None
 
+    def get_center_or_department(self, code):
+        Department = swapper.load_model('kernel', 'Department')
+        Centre = swapper.load_model('kernel', 'Centre')
+
+        dept = Department.objects.filter(code=code)
+        centre = Centre.objects.filter(code=code)
+
+        entity_obj = dept or centre
+        if entity_obj.exists():
+            return entity_obj.first()
+        raise ValidationError("Invalid code for department or centre")
+
     def get(self, request, *args, **kwargs):
+        FacultyMember = swapper.load_model('kernel', 'facultyMember')
         employee_id = kwargs.get('employee_id')
+        department_code = request.GET.get('department')
+
+        if department_code:
+            try:
+                entity_obj = self.get_center_or_department(department_code)
+                faculty_members = FacultyMember.objects.filter(
+                    Q(entity_object_id=entity_obj.id) & Q(
+                        entity_content_type=ContentType.objects.get_for_model(entity_obj)))
+            except ValidationError:
+                return Response(
+                    { 'Error': ['Invalid department code'] },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            faculty_members = FacultyMember.objects.all()
+
         if employee_id is None:
-            return Response(
-                { 'Error': ['Faculty id parameter is missing.'] },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            response = []
+            for faculty_member in faculty_members:
+                data = {}
+                data['id'] = faculty_member.employee_id
+                data['name'] = faculty_member.person.full_name
+                try:
+                    data['gender'] = faculty_member.person.biologicalinformation.sex
+                except:
+                    data['gender'] = ''
+                data['department'] = faculty_member.department.name
+                data['designation'] = faculty_member.get_designation_display()
+                response.append(data)
+            return Response(response, status=status.HTTP_200_OK)
+
         try:
-            FacultyMember = swapper.load_model('kernel', 'facultyMember')
-            faculty_member = FacultyMember.objects.get(employee_id=employee_id)
+            faculty_member = faculty_members.get(employee_id=employee_id)
             response = {}
             for key in viewset_dict:
                 Model = models[key]
@@ -646,3 +689,4 @@ class DataLeakView(APIView):
                 { 'Error': ['Invalid Faculty id.'] },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+

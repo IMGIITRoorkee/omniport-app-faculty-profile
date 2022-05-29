@@ -17,11 +17,7 @@ class CanDataLeak(permissions.BasePermission):
         data_leak = CONFIGURATION.integrations.get('dataLeak')
 
         if data_leak is not None:
-            app_token = data_leak.get('facappToken')
-            valid_ips = data_leak.get('ipAddresses')
-
-            if app_token is None or valid_ips is None:
-                return False
+            data_leak_map = {data['facappToken']: data for data in data_leak}
 
             # request's ip address
             x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -33,7 +29,17 @@ class CanDataLeak(permissions.BasePermission):
             # request's authorization tokens
             request_token = request.headers.get('Authorization')
 
-            if request_token == app_token and request_ip in valid_ips:
+            leak = data_leak_map.get(request_token)
+            if leak and request_ip in leak['ipAddresses']:
+
+                department = request.GET.get('department')
+
+                # Check is user's access is limited to certain departments only
+                allowed_departments = leak.get('departments')
+                if allowed_departments:
+                    return department in allowed_departments
+
                 return True
 
         return False
+
