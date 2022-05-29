@@ -50,5 +50,6 @@ urlpatterns = [
     ),
     url(r'csv', WriteAppendMultipleObjects.as_view(actions={'post': 'post'})),
     path('data/<int:employee_id>/', DataLeakView.as_view()),
+    path('data', DataLeakView.as_view()),
     url(r'^', include(router.urls)),
 ]
