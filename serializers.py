@@ -50,5 +50,23 @@ def return_serializer(class_name):
 
     return Serializer
 
+class AddressSerializer(serializers.ModelSerializer):
+    """
+    Serializer for LocationInformation objects
+    """
+
+    class Meta:
+        """
+        Meta class for LocationInformation 
+        """
+
+        model = swapper.load_model('formula_one','LocationInformation')
+
+        fields = [
+            'id',
+           'address'
+        ]
+
 for key in serializer_dict:
     serializer_dict[key] = return_serializer(key)
+serializer_dict['Address'] = AddressSerializer

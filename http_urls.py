@@ -5,6 +5,7 @@ import inflection
 from faculty_profile.views import (
     CMSIntegrationView,
     DragAndDropView,
+    AddressViewSet,
     WriteAppendMultipleObjects,
     DataLeakView,
     viewset_dict,
@@ -38,6 +39,8 @@ for model in models:
         viewset_dict[model],
         basename=model
     )
+
+router.register(r'address',AddressViewSet, basename='address')
 
 urlpatterns = [
     url(r'rearrange', DragAndDropView.as_view()),
