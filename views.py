@@ -690,3 +690,13 @@ class DataLeakView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+class AddressViewSet(ModelViewSet):
+        serializer_class = serializer_dict['Address']
+        permission_classes = (IsFacultyMember, )
+        pagination_class = None
+        filter_backends = tuple()
+
+        def get_queryset(self):
+            Model = swapper.load_model('formula_one','LocationInformation')
+            faculty_member = get_role(self.request.person, 'FacultyMember')
+            return Model.objects.filter(entity_object_id = faculty_member.id)
