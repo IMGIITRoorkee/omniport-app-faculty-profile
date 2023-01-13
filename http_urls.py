@@ -1,5 +1,5 @@
-from django.conf.urls import url, include
-from django.urls import path
+from django.conf.urls import include
+from django.urls import path, re_path
 from rest_framework import routers
 import inflection
 from faculty_profile.views import (
@@ -43,16 +43,16 @@ for model in models:
 router.register(r'address',AddressViewSet, basename='address')
 
 urlpatterns = [
-    url(r'rearrange', DragAndDropView.as_view()),
-    url(r'cms', CMSIntegrationView.as_view()),
-    url(r'csv/download', WriteAppendMultipleObjects.as_view(
+    re_path(r'rearrange', DragAndDropView.as_view()),
+    re_path(r'cms', CMSIntegrationView.as_view()),
+    re_path(r'csv/download', WriteAppendMultipleObjects.as_view(
         actions={'get': 'download'})
     ),
-    url(r'csv/affordances', WriteAppendMultipleObjects.as_view(
+    re_path(r'csv/affordances', WriteAppendMultipleObjects.as_view(
         actions={'get': 'affordance'})
     ),
-    url(r'csv', WriteAppendMultipleObjects.as_view(actions={'post': 'post'})),
-    path('data/<int:employee_id>/', DataLeakView.as_view()),
-    path('data', DataLeakView.as_view()),
-    url(r'^', include(router.urls)),
+    re_path(r'csv', WriteAppendMultipleObjects.as_view(actions={'post': 'post'})),
+    re_path('data/<int:employee_id>/', DataLeakView.as_view()),
+    re_path('data', DataLeakView.as_view()),
+    re_path(r'^', include(router.urls)),
 ]
