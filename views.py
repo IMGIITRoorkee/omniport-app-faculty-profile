@@ -30,6 +30,7 @@ from omniport.settings.configuration.base import CONFIGURATION
 from faculty_profile.serializers import serializer_dict
 from faculty_profile.permissions.is_faculty_member import IsFacultyMember
 from faculty_profile.permissions.has_data_leak_rights import CanDataLeak
+from faculty_profile.cms_urls import KEYWORD_URL, SHORTURLS_URL
 
 logger = logging.getLogger('faculty_profile')
 
@@ -700,3 +701,172 @@ class AddressViewSet(ModelViewSet):
             Model = swapper.load_model('formula_one','LocationInformation')
             faculty_member = get_role(self.request.person, 'FacultyMember')
             return Model.objects.filter(entity_object_id = faculty_member.id)
+
+class ShortURLView(APIView):
+
+    CMS = CONFIGURATION.integrations.get('cms', False)
+
+    permission_classes = (IsFacultyMember, )
+
+    def get_faculty_info(self,request):
+        data = {}
+        data['username'] = request.person.user.username
+        data['token'] = self.CMS.get('facapp_token')
+        data['dept'] = request.person.facultymember.department.name
+        data['employee_id'] = request.person.facultymember.employee_id
+        return data
+
+    def get(self, request, format=None):
+        data = self.get_faculty_info(request)
+        user = request.user.username
+        data["action"] = "get"
+        url = f'{SHORTURLS_URL}'
+        try:
+            response = requests.post(url, data=data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if response.status_code == 200:
+            logger.info(f'{user} successfully made a {data["action"]} request')
+            return Response(response.json())
+        return Response({"msg":"Something Went Wrong"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def post(self, request):
+        data = self.get_faculty_info(request)
+        user = request.user.username
+        data["action"] = "post"
+        data["short"] = request.data.get("shorturl",None)
+        url = f'{SHORTURLS_URL}'
+        try:
+            response = requests.post(url, data=data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if response.status_code == 201:
+            logger.info(f'{user} successfully made a {data["action"]} request')
+            return Response(response.json())
+        return Response({"msg":"Something Went Wrong"}, status=status.HTTP_400_BAD_REQUEST)
+           
+    def put(self, request, format=None):
+        data = self.get_faculty_info(request)
+        user = request.user.username
+        data["action"] = "put"
+        data["short"] = request.data.get("shorturl",None)
+        data["id"] = request.data.get("id",None)
+        url = f'{SHORTURLS_URL}'
+        try:
+            response = requests.post(url, data=data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if response.status_code == 201:
+            logger.info(f'{user} successfully made a {data["action"]} request')
+            return Response(response.json())
+        return Response({"msg":"Something Went Wrong"}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, format=None):
+        data = self.get_faculty_info(request)
+        user = request.user.username
+        data["action"] = "delete"
+        data["id"] = request.data.get("id",None)
+        url = f'{SHORTURLS_URL}'
+        try:
+            response = requests.post(url, data=data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if response.status_code == 200:
+            logger.info(f'{user} successfully made a {data["action"]} request')
+            return Response(response.json())
+        return Response({"msg":"Something Went Wrong"}, status=status.HTTP_400_BAD_REQUEST)
+
+class KeyWordView(APIView):
+
+    permission_classes = (IsFacultyMember, )
+
+    CMS = CONFIGURATION.integrations.get('cms', False)
+
+    def get_faculty_info(self,request):
+        data = {}
+        data['username'] = request.person.user.username
+        data['token'] = self.CMS.get('facapp_token')
+        data['dept'] = request.person.facultymember.department.name
+        data['employee_id'] = request.person.facultymember.employee_id
+        return data
+
+    def get(self, request, format=None):
+        data = self.get_faculty_info(request)
+        user = request.user.username
+        url = f'{KEYWORD_URL}'
+        data["action"] = "get"
+        try:
+            response = requests.post(url, data=data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        if response.status_code == 200:
+            logger.info(f'{user} successfully made a {data["action"]} request')
+            return Response(response.json())
+        return Response({"msg":"Something Went Wrong"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def post(self, request):
+        data = self.get_faculty_info(request)
+        user = request.user.username
+        data["action"] = "post"
+        data["keyword"] = request.data.get("keyword",None)
+        url = f'{KEYWORD_URL}'
+
+        try:
+            response = requests.post(url, data=data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if response.status_code == 201:
+            logger.info(f'{user} successfully made a {data["action"]} request')
+            return Response(response.json())
+        return Response({"msg":"Something Went Wrong"}, status=status.HTTP_400_BAD_REQUEST)
+         
+    def put(self, request, format=None):
+        data = self.get_faculty_info(request)
+        user = request.user.username
+        data["action"] = "put"
+        data["keyword"] = request.data.get("keyword",None)
+        data["id"] = request.data.get("id",None)
+        url = f'{KEYWORD_URL}'
+
+        try:
+            response = requests.post(url, data=data)
+        except Exception as e:
+            logger.info(f'CMS is not responding to requests -- {str(e)} -- {url}')
+            return Response(
+                'Connection Refused',
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if response.status_code == 201:
+            logger.info(f'{user} successfully made a {data["action"]} request')
+            return Response(response.json())
+        return Response({"msg":"Something Went Wrong"}, status=status.HTTP_400_BAD_REQUEST)

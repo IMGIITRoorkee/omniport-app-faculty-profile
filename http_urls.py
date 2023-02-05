@@ -8,6 +8,8 @@ from faculty_profile.views import (
     AddressViewSet,
     WriteAppendMultipleObjects,
     DataLeakView,
+    ShortURLView,
+    KeyWordView,
     viewset_dict,
 )
 
@@ -55,4 +57,6 @@ urlpatterns = [
     re_path('data/<int:employee_id>/', DataLeakView.as_view()),
     re_path('data', DataLeakView.as_view()),
     re_path(r'^', include(router.urls)),
+    re_path(r'shorturl', ShortURLView.as_view()),
+    re_path(r'keyword', KeyWordView.as_view()),
 ]
