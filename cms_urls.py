@@ -1,2 +1,2 @@
-SHORTURLS_URL = "<host name>/confman/faculty_shorturls/"
-KEYWORD_URL = "<host name>/generator/keywords/"
+SHORTURLS_URL = "https://chakra.channeli.in/confman/faculty_shorturls/"
+KEYWORD_URL = "https://chakra.channeli.in/generator/keywords/"
