@@ -62,10 +62,7 @@ class AddressSerializer(serializers.ModelSerializer):
 
         model = swapper.load_model('formula_one','LocationInformation')
 
-        fields = [
-            'id',
-           'address'
-        ]
+        fields = '__all__'
 
 for key in serializer_dict:
     serializer_dict[key] = return_serializer(key)

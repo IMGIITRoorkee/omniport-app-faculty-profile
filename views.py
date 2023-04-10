@@ -702,6 +702,19 @@ class AddressViewSet(ModelViewSet):
             faculty_member = get_role(self.request.person, 'FacultyMember')
             return Model.objects.filter(entity_object_id = faculty_member.id)
 
+        def create(self, request, *args, **kwargs):
+            Model = swapper.load_model('kernel','Person')
+            data = request.data
+            faculty_member = get_role(self.request.person, 'FacultyMember')
+            data['entity_object_id'] = faculty_member.id
+            data['entity_content_type'] = ContentType.objects.get_for_model(Model).id
+            serializer = self.serializer_class(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class ShortURLView(APIView):
 
     CMS = CONFIGURATION.integrations.get('cms', False)
