@@ -700,13 +700,13 @@ class AddressViewSet(ModelViewSet):
         def get_queryset(self):
             Model = swapper.load_model('formula_one','LocationInformation')
             faculty_member = get_role(self.request.person, 'FacultyMember')
-            return Model.objects.filter(entity_object_id = faculty_member.id)
+            return Model.objects.filter(entity_object_id = faculty_member.person_id)
 
         def create(self, request, *args, **kwargs):
             Model = swapper.load_model('kernel','Person')
             data = request.data
             faculty_member = get_role(self.request.person, 'FacultyMember')
-            data['entity_object_id'] = faculty_member.id
+            data['entity_object_id'] = faculty_member.person_id
             data['entity_content_type'] = ContentType.objects.get_for_model(Model).id
             serializer = self.serializer_class(data=data)
             if serializer.is_valid():
