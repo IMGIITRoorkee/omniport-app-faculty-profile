@@ -753,6 +753,7 @@ class ShortURLView(APIView):
         user = request.user.username
         data["action"] = "post"
         data["short"] = request.data.get("shorturl",None)
+        data["request_from"]="facApp"
         url = f'{SHORTURLS_URL}'
         try:
             response = requests.post(url, data=data)
