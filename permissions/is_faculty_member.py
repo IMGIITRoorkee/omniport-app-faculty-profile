@@ -31,7 +31,7 @@ class IsFacultyMember(permissions.BasePermission):
         FacultyMember = swapper.load_model('kernel', 'FacultyMember')
         faculty_member = get_role(request.person, 'FacultyMember')
         if type(obj)== swapper.load_model('formula_one', 'LocationInformation'):
-            if obj.entity_object_id == faculty_member.id:
+            if obj.entity_object_id == faculty_member.person_id:
                 return True
             else:
                 return False
