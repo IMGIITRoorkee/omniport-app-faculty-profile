@@ -23,6 +23,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 from kernel.managers.get_role import get_role
 from omniport.settings.configuration.base import CONFIGURATION
@@ -237,20 +238,17 @@ class ProfileViewset(ModelViewSet):
 
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'], permission_classes=[])
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
     def handle(self, request, pk=None):
         """
-        A view to check whether a handle is already taken
+        A view to check whether a handle is already taken, used only by the
+        profile form, so it is closed to anonymous callers
         """
-        try:
-            profile = models['Profile'].objects.get(handle=pk)
-            print(profile)
-            if profile is not None:
-                return Response("no")
-        except:
-            return Response("yes")
-        return Response("yes")
-        
+
+        taken = models['Profile'].objects.filter(handle=pk).exists()
+        return Response("no" if taken else "yes")
+
+
 viewset_dict["Profile"] = ProfileViewset
 
 
